@@ -6,6 +6,7 @@
     <title>Trading Day Performance Tracker</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
@@ -78,10 +79,11 @@
                     <canvas id="performanceChart"></canvas>
                 </div>
                 <p class="chart-info">hover over data points to see details</p>
+                <div id="connectionStatus" style="font-size: 0.9em; color: #666;"></div>
             </div>
         </div>
     </div>
     
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>

@@ -1,22 +1,97 @@
+// Import from supabase-config
+import { supabaseClient, TRADING_TABLE } from './supabase-config.js';
+
 // Initialize data storage
-let tradingData = JSON.parse(localStorage.getItem('tradingData')) || [];
+let tradingData = [];
 
 // Chart configuration
 let performanceChart = null;
 
+// Update connection status display
+function updateConnectionStatus(connected, message = '') {
+    const statusElement = document.getElementById('connectionStatus');
+    if (statusElement) {
+        if (connected) {
+            statusElement.innerHTML = '🟢 connected' + (message ? ` - ${message}` : '');
+            statusElement.style.color = '#4ade80';
+        } else {
+            statusElement.innerHTML = '🔴 ' + (message || 'Not connected to database (using local storage)');
+            statusElement.style.color = '#f87171';
+        }
+    }
+}
+
+// Load data from Supabase
+async function loadDataFromSupabase() {
+    if (!supabaseClient) {
+        console.error('Supabase client not initialized');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from(TRADING_TABLE)
+            .select('*')
+            .order('date', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Convert Supabase data to our format
+        tradingData = data.map(entry => ({
+            rating: parseFloat(entry.rating),
+            hoursAwake: parseFloat(entry.hours_awake),
+            date: entry.date,
+            notes: entry.notes,
+            timestamp: entry.timestamp,
+            id: entry.id // Keep the Supabase ID for updates/deletes
+        }));
+        
+        updateChart();
+        showNotification(`Loaded ${tradingData.length} entries from database`, 'success');
+    } catch (error) {
+        console.error('Error loading data from Supabase:', error);
+        updateConnectionStatus(false, 'Error loading data');
+        showNotification('Error loading data. Check your API key and connection.', 'error');
+        
+        // Try to load from localStorage as fallback
+        const localData = localStorage.getItem('tradingData');
+        if (localData) {
+            tradingData = JSON.parse(localData);
+            updateChart();
+            showNotification('Loaded cached data from local storage', 'info');
+        }
+    }
+}
+
 // Set today's date as default
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const dateInput = document.getElementById('date');
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
     
     // Initialize chart
     initializeChart();
-    updateChart();
+    
+    // Check if Supabase is available
+    if (supabaseClient) {
+        // Load data from Supabase
+        await loadDataFromSupabase();
+        updateConnectionStatus(true);
+    } else {
+        updateConnectionStatus(false, 'No database connection (check .env file)');
+        showNotification('No database connection. Data will be stored locally.', 'warning');
+        
+        // Try to load from localStorage as fallback
+        const localData = localStorage.getItem('tradingData');
+        if (localData) {
+            tradingData = JSON.parse(localData);
+            updateChart();
+        }
+    }
 });
 
 // Form submission handler
-document.getElementById('tradingForm').addEventListener('submit', function(e) {
+document.getElementById('tradingForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     // Get form values
@@ -36,34 +111,70 @@ document.getElementById('tradingForm').addEventListener('submit', function(e) {
         return;
     }
     
-    // Create data entry
-    const entry = {
+    // Create data entry for Supabase
+    const supabaseEntry = {
         rating: rating,
-        hoursAwake: hoursAwake,
+        hours_awake: hoursAwake,
         date: date,
-        notes: notes,
+        notes: notes || null,
         timestamp: new Date().toISOString()
     };
     
-    // Add to data array
-    tradingData.push(entry);
-    
-    // Save to localStorage
-    localStorage.setItem('tradingData', JSON.stringify(tradingData));
-    
-    // Update chart
-    updateChart();
-    
-    // Reset form
-    this.reset();
-    // Set date back to today
-    document.getElementById('date').value = new Date().toISOString().split('T')[0];
-    
-    // Show success message
-    showNotification('Entry added successfully!', 'success');
-    
-    // Rain down cat emojis based on rating!
-    rainCatEmoji(rating);
+    // Save to Supabase
+    if (supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient
+                .from(TRADING_TABLE)
+                .insert([supabaseEntry])
+                .select();
+            
+            if (error) throw error;
+            
+            // Add to local data array with Supabase ID
+            const entry = {
+                rating: rating,
+                hoursAwake: hoursAwake,
+                date: date,
+                notes: notes,
+                timestamp: data[0].timestamp,
+                id: data[0].id
+            };
+            tradingData.push(entry);
+            
+            // Update chart
+            updateChart();
+            
+            // Reset form
+            this.reset();
+            // Set date back to today
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            
+            // Show success message
+            showNotification('Entry added successfully!', 'success');
+            
+            // Rain down cat emojis based on rating!
+            rainCatEmoji(rating);
+        } catch (error) {
+            console.error('Error saving to Supabase:', error);
+            showNotification('Error saving entry. Please try again.', 'error');
+        }
+    } else {
+        // Fallback to localStorage if Supabase is not configured
+        const entry = {
+            rating: rating,
+            hoursAwake: hoursAwake,
+            date: date,
+            notes: notes,
+            timestamp: new Date().toISOString()
+        };
+        tradingData.push(entry);
+        localStorage.setItem('tradingData', JSON.stringify(tradingData));
+        updateChart();
+        this.reset();
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        showNotification('Entry saved locally (no database connection)', 'warning');
+        rainCatEmoji(rating);
+    }
 });
 
 // Initialize Chart.js
@@ -220,19 +331,41 @@ document.getElementById('exportData').addEventListener('click', function() {
 });
 
 // Clear data functionality
-document.getElementById('clearData').addEventListener('click', function() {
+document.getElementById('clearData').addEventListener('click', async function() {
     if (tradingData.length === 0) {
         alert('No data to clear');
         return;
     }
     
     if (confirm('Are you sure you want to delete all data? This action cannot be undone.')) {
-        tradingData = [];
-        localStorage.removeItem('tradingData');
-        updateChart();
-        showNotification('All data cleared!', 'info');
+        if (supabaseClient) {
+            try {
+                // Delete all records from Supabase
+                const { error } = await supabaseClient
+                    .from(TRADING_TABLE)
+                    .delete()
+                    .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all (using a condition that's always true)
+                
+                if (error) throw error;
+                
+                tradingData = [];
+                updateChart();
+                showNotification('All data cleared from database!', 'info');
+            } catch (error) {
+                console.error('Error clearing data from Supabase:', error);
+                showNotification('Error clearing data. Please try again.', 'error');
+            }
+        } else {
+            // Fallback to localStorage
+            tradingData = [];
+            localStorage.removeItem('tradingData');
+            updateChart();
+            showNotification('All local data cleared!', 'info');
+        }
     }
 });
+
+// Note: API key is now managed through .env file with Vite
 
 // Utility functions
 function formatDate(dateString) {

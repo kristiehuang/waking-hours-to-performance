@@ -1,25 +1,61 @@
 # Trading Day Performance Tracker
 
-A simple web app to track the correlation between wake-up time and trading day performance. Built with vanilla JavaScript and Chart.js, hosted on GitHub Pages.
+A simple web app to track the correlation between wake-up time and trading day performance. Built with vanilla JavaScript and Chart.js, with Supabase integration for cloud storage.
 
 ## Features
 
 - **Easy Data Entry**: Simple form to rate your trading day (1-10) and track hours awake before 9:30 AM
 - **Visual Analysis**: Interactive scatter plot showing the relationship between wake time and performance
 - **Detailed Insights**: Hover over data points to see date and notes
-- **Data Persistence**: Uses browser localStorage to save your data
+- **Data Persistence**: Uses Supabase for cloud storage (with localStorage fallback)
 - **Export Functionality**: Download your data as CSV for further analysis
 - **Responsive Design**: Works on desktop and mobile devices
+- **Real-time Sync**: Access your data from anywhere with Supabase
 
-## Setup for GitHub Pages
+## Development Setup
 
-1. Push this repository to GitHub
-2. Go to your repository settings on GitHub
-3. Scroll down to the "Pages" section
-4. Under "Source", select "Deploy from a branch"
-5. Choose "main" branch and "/ (root)" folder
-6. Click "Save"
-7. Your site will be available at `https://[your-username].github.io/felix-trading-day-to-waking-hours/`
+### Prerequisites
+
+- Node.js installed on your machine
+- A Supabase account and project
+
+### Installation
+
+1. Clone this repository
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file in the project root:
+   ```
+   VITE_SUPABASE_KEY=your-actual-supabase-api-key
+   ```
+4. Set up the Supabase database:
+
+   - Go to your Supabase dashboard
+   - Navigate to SQL Editor
+   - Run the contents of `supabase-setup.sql`
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist` directory.
+
+### Deploying to GitHub Pages
+
+1. Build the project: `npm run build`
+2. Deploy the `dist` folder to GitHub Pages
+3. Note: For production, consider using Supabase Auth instead of exposing API keys
 
 ## How to Use
 
@@ -32,31 +68,37 @@ A simple web app to track the correlation between wake-up time and trading day p
 ## Features Explained
 
 ### The Graph
+
 - **X-axis**: Hours awake before 9:30 AM
 - **Y-axis**: Trading day rating (1-10)
 - **Hover**: See date and notes for each data point
 
 ### Data Management
+
 - **Export Data**: Download all your entries as a CSV file
 - **Clear All Data**: Remove all stored data (use with caution!)
 
 ## Technical Details
 
 - Built with vanilla HTML, CSS, and JavaScript
+- Uses Vite as the build tool for environment variable support
 - Uses Chart.js for data visualization
-- Data stored in browser localStorage
-- No backend required - fully static site
+- Data stored in Supabase (PostgreSQL) with localStorage fallback
+- Supabase client for database operations
 
 ## Browser Support
 
 Works on all modern browsers that support:
+
 - ES6 JavaScript
 - localStorage
 - Chart.js
 
 ## Privacy
 
-All data is stored locally in your browser. No data is sent to any server.
+- Data is stored in your Supabase database (you control the database)
+- Falls back to localStorage if Supabase is unavailable
+- API keys are stored locally and never exposed in code
 
 ## License
 
