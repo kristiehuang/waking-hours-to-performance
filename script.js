@@ -62,8 +62,8 @@ document.getElementById('tradingForm').addEventListener('submit', function(e) {
     // Show success message
     showNotification('Entry added successfully!', 'success');
     
-    // Rain down a cat emoji!
-    rainCatEmoji();
+    // Rain down cat emojis based on rating!
+    rainCatEmoji(rating);
 });
 
 // Initialize Chart.js
@@ -298,4 +298,100 @@ function showNotification(message, type) {
             document.body.removeChild(notification);
         }, 300);
     }, 3000);
+}
+
+// Cat emoji rain function
+function rainCatEmoji(rating) {
+    // Select cat emojis based on trading day rating
+    let catEmojis;
+    
+    if (rating > 6.5) {
+        // Great day! Happy cats
+        catEmojis = ['😹', '😻', '😼'];
+    } else if (rating < 5) {
+        // Tough day... sad/surprised cats
+        catEmojis = ['🙀', '😿', '😽'];
+    } else {
+        // Average day, neutral cats
+        catEmojis = ['😺', '😸'];
+    }
+    
+    // Add the animation keyframes if not already added
+    if (!document.getElementById('catRainAnimation')) {
+        const style = document.createElement('style');
+        style.id = 'catRainAnimation';
+        style.textContent = `
+            @keyframes catFall {
+                0% {
+                    transform: translateY(0) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(${window.innerHeight + 200}px) rotate(720deg);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes catFallSwaying {
+                0% {
+                    transform: translateY(0) translateX(0) rotate(0deg);
+                    opacity: 1;
+                }
+                25% {
+                    transform: translateY(${window.innerHeight * 0.25}px) translateX(30px) rotate(180deg);
+                }
+                50% {
+                    transform: translateY(${window.innerHeight * 0.5}px) translateX(-30px) rotate(360deg);
+                }
+                75% {
+                    transform: translateY(${window.innerHeight * 0.75}px) translateX(20px) rotate(540deg);
+                }
+                100% {
+                    transform: translateY(${window.innerHeight + 200}px) translateX(-20px) rotate(720deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Create multiple cats for confetti effect
+    const numberOfCats = 20; // Always maximum cats!
+    
+    for (let i = 0; i < numberOfCats; i++) {
+        setTimeout(() => {
+            // Pick a random cat emoji
+            const randomCat = catEmojis[Math.floor(Math.random() * catEmojis.length)];
+            
+            // Create the emoji element
+            const catDiv = document.createElement('div');
+            catDiv.textContent = randomCat;
+            
+            // Random properties for variety
+            const size = 2 + Math.random() * 2; // Size between 2-4rem
+            const duration = 2.5 + Math.random() * 2; // Duration between 2.5-4.5s
+            const delay = Math.random() * 0.3; // Small random delay
+            const animation = Math.random() > 0.5 ? 'catFall' : 'catFallSwaying'; // Mix of animations
+            
+            catDiv.style.cssText = `
+                position: fixed;
+                font-size: ${size}rem;
+                top: -100px;
+                left: ${Math.random() * window.innerWidth}px;
+                z-index: 9999;
+                animation: ${animation} ${duration}s ease-in ${delay}s forwards;
+                pointer-events: none;
+            `;
+            
+            // Add the cat to the page
+            document.body.appendChild(catDiv);
+            
+            // Remove the cat after animation completes
+            setTimeout(() => {
+                if (catDiv.parentNode) {
+                    document.body.removeChild(catDiv);
+                }
+            }, (duration + delay) * 1000 + 100);
+        }, i * 50); // Stagger the creation for a cascade effect
+    }
 }
