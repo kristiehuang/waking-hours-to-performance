@@ -72,7 +72,7 @@ The site will automatically deploy when you push to the `main` branch. The GitHu
 - Build your app with the secret environment variable
 - Deploy to GitHub Pages
 
-Your site will be available at: `https://[your-username].github.io/felix-trading-day-to-waking-hours/`
+Your site will be available at: `https://[your-username].github.io/trading-day-to-waking-hours/`
 
 #### Manual Deployment (Alternative)
 
