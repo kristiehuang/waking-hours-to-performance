@@ -61,6 +61,9 @@ document.getElementById('tradingForm').addEventListener('submit', function(e) {
     
     // Show success message
     showNotification('Entry added successfully!', 'success');
+    
+    // Rain down a cat emoji!
+    rainCatEmoji();
 });
 
 // Initialize Chart.js
@@ -73,14 +76,14 @@ function initializeChart() {
             datasets: [{
                 label: 'Trading Performance',
                 data: [],
-                backgroundColor: 'rgba(74, 144, 226, 0.6)',
-                borderColor: 'rgba(74, 144, 226, 1)',
-                borderWidth: 2,
-                pointRadius: 8,
-                pointHoverRadius: 10,
-                pointHoverBackgroundColor: 'rgba(74, 144, 226, 0.8)',
-                pointHoverBorderColor: 'rgba(74, 144, 226, 1)',
-                pointHoverBorderWidth: 3
+                backgroundColor: 'rgba(26, 26, 26, 0.7)',
+                borderColor: 'rgba(26, 26, 26, 1)',
+                borderWidth: 1,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: 'rgba(255, 107, 107, 0.8)',
+                pointHoverBorderColor: 'rgba(255, 107, 107, 1)',
+                pointHoverBorderWidth: 2
             }]
         },
         options: {
@@ -88,20 +91,20 @@ function initializeChart() {
             maintainAspectRatio: false,
             plugins: {
                 title: {
-                    display: true,
-                    text: 'Trading Day Rating vs Hours Awake Before 9:30 AM',
-                    font: {
-                        size: 16
-                    }
+                    display: false
+                },
+                legend: {
+                    display: false
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             const dataPoint = tradingData[context.dataIndex];
+
                             const lines = [
                                 `Rating: ${dataPoint.rating}`,
                                 `Hours Awake: ${dataPoint.hoursAwake}`,
-                                `Date: ${formatDate(dataPoint.date)}`
+                                `Date: ${formatDate(dataPoint.date)}`,
                             ];
                             if (dataPoint.notes) {
                                 lines.push(`Notes: ${dataPoint.notes}`);
@@ -125,13 +128,20 @@ function initializeChart() {
                         display: true,
                         text: 'Hours Awake Before 9:30 AM',
                         font: {
-                            size: 14
-                        }
+                            size: 13,
+                            weight: 400
+                        },
+                        color: '#666'
                     },
                     min: 0,
-                    suggestedMax: 8,
+                    suggestedMax: 3,
                     ticks: {
-                        stepSize: 0.5
+                        stepSize: 0.2,
+                        color: '#666'
+                    },
+                    grid: {
+                        color: '#f0f0f0',
+                        borderColor: '#e0e0e0'
                     }
                 },
                 y: {
@@ -139,13 +149,20 @@ function initializeChart() {
                         display: true,
                         text: 'Trading Day Rating',
                         font: {
-                            size: 14
-                        }
+                            size: 13,
+                            weight: 400
+                        },
+                        color: '#666'
                     },
                     min: 0,
                     max: 10,
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        color: '#666'
+                    },
+                    grid: {
+                        color: '#f0f0f0',
+                        borderColor: '#e0e0e0'
                     }
                 }
             }
@@ -235,10 +252,10 @@ function showNotification(message, type) {
     
     // Style based on type
     const colors = {
-        success: '#28a745',
-        info: '#17a2b8',
-        warning: '#ffc107',
-        error: '#dc3545'
+        success: '#1a1a1a',
+        info: '#666666',
+        warning: '#ff6b6b',
+        error: '#ff6b6b'
     };
     
     notification.style.cssText = `
@@ -247,9 +264,9 @@ function showNotification(message, type) {
         right: 20px;
         background-color: ${colors[type] || colors.info};
         color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 12px 18px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         z-index: 1000;
         animation: slideIn 0.3s ease-out;
     `;
