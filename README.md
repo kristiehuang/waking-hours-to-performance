@@ -53,9 +53,38 @@ The built files will be in the `dist` directory.
 
 ### Deploying to GitHub Pages
 
-1. Build the project: `npm run build`
-2. Deploy the `dist` folder to GitHub Pages
-3. Note: For production, consider using Supabase Auth instead of exposing API keys
+#### Setup GitHub Secrets
+
+1. Go to your repository on GitHub
+2. Navigate to Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Add a secret named `VITE_SUPABASE_KEY` with your Supabase API key as the value
+
+#### Enable GitHub Pages
+
+1. Go to Settings → Pages
+2. Under "Source", select "GitHub Actions"
+
+#### Deploy
+
+The site will automatically deploy when you push to the `main` branch. The GitHub Action will:
+
+- Build your app with the secret environment variable
+- Deploy to GitHub Pages
+
+Your site will be available at: `https://[your-username].github.io/felix-trading-day-to-waking-hours/`
+
+#### Manual Deployment (Alternative)
+
+If you prefer to build locally and deploy manually:
+
+```bash
+# Build with your API key
+VITE_SUPABASE_KEY=your-key npm run build
+
+# Deploy the dist folder to GitHub Pages
+# (You can use gh-pages npm package or manually push to gh-pages branch)
+```
 
 ## How to Use
 
