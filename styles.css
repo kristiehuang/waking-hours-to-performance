@@ -175,6 +175,20 @@ a:hover {
     font-weight: 500;
 }
 
+/* Custom tooltip styles */
+#chartjs-tooltip {
+    transition: opacity 0.2s ease;
+}
+
+#chartjs-tooltip:hover {
+    opacity: 1 !important;
+}
+
+#chartjs-tooltip button:hover {
+    background: #b91c1c !important;
+    transform: scale(0.98);
+}
+
 /* Responsive design */
 @media (max-width: 900px) {
     .content-wrapper {

@@ -145,6 +145,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize chart
     initializeChart();
     
+    // Add event listener to hide tooltip when clicking outside
+    document.addEventListener('click', function(e) {
+        const tooltipEl = document.getElementById('chartjs-tooltip');
+        if (tooltipEl && !tooltipEl.contains(e.target) && !e.target.closest('canvas')) {
+            tooltipEl.style.opacity = 0;
+        }
+    });
+    
     // Check if Supabase is available
     if (supabaseClient) {
         // Load data from Supabase
@@ -315,9 +323,43 @@ function initializeChart() {
                     display: false
                 },
                 tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const dataPoint = tradingData[context.dataIndex];
+                    enabled: false, // Disable default tooltip
+                    external: function(context) {
+                        // Custom HTML tooltip
+                        let tooltipEl = document.getElementById('chartjs-tooltip');
+
+                        // Create element on first render
+                        if (!tooltipEl) {
+                            tooltipEl = document.createElement('div');
+                            tooltipEl.id = 'chartjs-tooltip';
+                            tooltipEl.innerHTML = '<div></div>';
+                            document.body.appendChild(tooltipEl);
+                        }
+
+                        // Hide if no tooltip
+                        const tooltipModel = context.tooltip;
+                        if (tooltipModel.opacity === 0) {
+                            // Add a small delay before hiding to allow hovering over tooltip
+                            setTimeout(() => {
+                                if (!tooltipEl.matches(':hover')) {
+                                    tooltipEl.style.opacity = 0;
+                                }
+                            }, 100);
+                            return;
+                        }
+
+                        // Set caret Position
+                        tooltipEl.classList.remove('above', 'below', 'no-transform');
+                        if (tooltipModel.yAlign) {
+                            tooltipEl.classList.add(tooltipModel.yAlign);
+                        } else {
+                            tooltipEl.classList.add('no-transform');
+                        }
+
+                        // Set content
+                        if (tooltipModel.body) {
+                            const dataIndex = tooltipModel.dataPoints[0].dataIndex;
+                            const dataPoint = tradingData[dataIndex];
                             
                             // Convert decimal hours back to hours and minutes for display
                             const totalMinutes = Math.round(dataPoint.hoursAwake * 60);
@@ -337,24 +379,47 @@ function initializeChart() {
                                     : `${displayHours}h`;
                             }
 
-                            const lines = [
-                                `Rating: ${dataPoint.rating}`,
-                                `Time Awake: ${timeString}`,
-                                `Date: ${formatDate(dataPoint.date)}`,
-                            ];
-                            if (dataPoint.notes) {
-                                lines.push(`Notes: ${dataPoint.notes}`);
-                            }
-                            return lines;
+                            // Escape HTML to prevent XSS
+                            const escapeHtml = (text) => {
+                                const div = document.createElement('div');
+                                div.textContent = text;
+                                return div.innerHTML;
+                            };
+                            
+                            const innerHtml = `
+                                <div style="background: rgba(0, 0, 0, 0.9); color: white; padding: 12px; border-radius: 4px; font-size: 13px; min-width: 200px;">
+                                    <div style="margin-bottom: 6px"><strong>Rating:</strong> ${dataPoint.rating}</div>
+                                    <div style="margin-bottom: 6px"><strong>Time Awake:</strong> ${timeString}</div>
+                                    <div style="margin-bottom: 6px"><strong>Date:</strong> ${formatDate(dataPoint.date)}</div>
+                                    ${dataPoint.notes ? `<div style="margin-bottom: 8px"><strong>Notes:</strong> ${escapeHtml(dataPoint.notes)}</div>` : ''}
+                                    <button onclick="deleteDataPoint(${dataIndex})" style="
+                                        background: #dc2626;
+                                        color: white;
+                                        border: none;
+                                        padding: 4px 12px;
+                                        border-radius: 3px;
+                                        cursor: pointer;
+                                        font-size: 12px;
+                                        margin-top: 4px;
+                                        width: 100%;
+                                    ">Delete Entry</button>
+                                </div>
+                            `;
+
+                            tooltipEl.innerHTML = innerHtml;
                         }
-                    },
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: 'white',
-                    bodyColor: 'white',
-                    padding: 12,
-                    displayColors: false,
-                    bodyFont: {
-                        size: 13
+
+                        const position = context.chart.canvas.getBoundingClientRect();
+                        const bodyFont = Chart.helpers.toFont(tooltipModel.options.bodyFont);
+
+                        // Display, position, and set styles for font
+                        tooltipEl.style.opacity = 1;
+                        tooltipEl.style.position = 'absolute';
+                        tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
+                        tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px';
+                        tooltipEl.style.font = bodyFont.string;
+                        tooltipEl.style.pointerEvents = 'auto';
+                        tooltipEl.style.zIndex = '1000';
                     }
                 }
             },
@@ -419,6 +484,47 @@ function updateChart() {
     performanceChart.data.datasets[0].data = chartData;
     performanceChart.update();
 }
+
+// Delete data point function (global for tooltip access)
+window.deleteDataPoint = async function(index) {
+    if (!confirm('Are you sure you want to delete this entry?')) {
+        return;
+    }
+    
+    const dataPoint = tradingData[index];
+    
+    if (supabaseClient && dataPoint.id) {
+        try {
+            // Delete from Supabase
+            const { error } = await supabaseClient
+                .from(TRADING_TABLE)
+                .delete()
+                .eq('id', dataPoint.id);
+            
+            if (error) throw error;
+            
+            // Remove from local array
+            tradingData.splice(index, 1);
+            updateChart();
+            showNotification('Entry deleted successfully!', 'success');
+        } catch (error) {
+            console.error('Error deleting from Supabase:', error);
+            showNotification('Error deleting entry. Please try again.', 'error');
+        }
+    } else {
+        // Delete from localStorage
+        tradingData.splice(index, 1);
+        localStorage.setItem('tradingData', JSON.stringify(tradingData));
+        updateChart();
+        showNotification('Entry deleted from local storage!', 'info');
+    }
+    
+    // Hide tooltip
+    const tooltipEl = document.getElementById('chartjs-tooltip');
+    if (tooltipEl) {
+        tooltipEl.style.opacity = 0;
+    }
+};
 
 // Export data functionality
 document.getElementById('exportData').addEventListener('click', function() {
