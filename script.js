@@ -435,7 +435,7 @@ function initializeChart() {
                         },
                         color: '#666'
                     },
-                    min: -1,
+                    suggestedMin: -1,
                     suggestedMax: 3,
                     ticks: {
                         stepSize: 0.5,
