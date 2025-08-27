@@ -47,6 +47,7 @@ async function loadDataFromSupabase() {
         }));
         
         updateChart();
+        console.log(tradingData);
         showNotification(`Loaded ${tradingData.length} entries from database`, 'success');
     } catch (error) {
         console.error('Error loading data from Supabase:', error);
@@ -390,7 +391,7 @@ function initializeChart() {
                                 <div style="background: rgba(0, 0, 0, 0.9); color: white; padding: 12px; border-radius: 4px; font-size: 13px; min-width: 200px;">
                                     <div style="margin-bottom: 6px"><strong>Rating:</strong> ${dataPoint.rating}</div>
                                     <div style="margin-bottom: 6px"><strong>Time Awake:</strong> ${timeString}</div>
-                                    <div style="margin-bottom: 6px"><strong>Date:</strong> ${formatDate(dataPoint.date)}</div>
+                                    <div style="margin-bottom: 6px"><strong>Date:</strong> ${dataPoint.date}</div>
                                     ${dataPoint.notes ? `<div style="margin-bottom: 8px"><strong>Notes:</strong> ${escapeHtml(dataPoint.notes)}</div>` : ''}
                                     <button onclick="deleteDataPoint(${dataIndex})" style="
                                         background: #dc2626;
@@ -596,17 +597,6 @@ document.getElementById('clearData').addEventListener('click', async function() 
     }
 });
 
-// Note: API key is now managed through .env file with Vite
-
-// Utility functions
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
-}
 
 function showNotification(message, type) {
     // Create notification element

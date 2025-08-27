@@ -8,7 +8,7 @@
 CREATE TABLE IF NOT EXISTS trading_performance (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     rating DECIMAL(3,1) NOT NULL CHECK (rating >= 1 AND rating <= 10),
-    hours_awake DECIMAL(4,1) NOT NULL CHECK (hours_awake >= 0 AND hours_awake <= 24),
+    hours_awake DECIMAL(4,1) NOT NULL CHECK (hours_awake >= -24 AND hours_awake <= 24),
     date DATE NOT NULL,
     notes TEXT,
     timestamp TIMESTAMPTZ DEFAULT NOW(),
