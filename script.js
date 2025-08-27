@@ -69,6 +69,79 @@ document.addEventListener('DOMContentLoaded', async function() {
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
     
+    // Add event listener for wake-up time input
+    const wakeUpTimeInput = document.getElementById('wakeUpTime');
+    const hoursInput = document.getElementById('hoursAwake');
+    const minutesInput = document.getElementById('minutesAwake');
+    
+    // Function to update wake-up time from hours/minutes
+    function updateWakeUpTime() {
+        const hours = parseInt(hoursInput.value) || 0;
+        const minutes = parseInt(minutesInput.value) || 0;
+    
+        if (hoursInput.value === '' && minutesInput.value === '') {
+            // Re-add required to wake-up time when manual inputs are cleared
+            wakeUpTimeInput.setAttribute('required', '');
+        } else {
+            // Calculate wake-up time by subtracting from 9:30 AM
+            const targetMinutes = 9 * 60 + 30; // 9:30 AM in minutes
+            const awakeMinutes = hours * 60 + minutes;
+            const wakeMinutes = targetMinutes - awakeMinutes;
+            
+            if (wakeMinutes < 0) {
+                const wakeHours = Math.ceil(wakeMinutes / 60);
+                const wakeMins = wakeMinutes % 60;
+                wakeUpTimeInput.value = `${String(wakeHours).padStart(2, '0')}:${String(wakeMins).padStart(2, '0')}`;
+            } else {
+                const wakeHours = Math.floor(wakeMinutes / 60);
+                const wakeMins = wakeMinutes % 60;
+                wakeUpTimeInput.value = `${String(wakeHours).padStart(2, '0')}:${String(wakeMins).padStart(2, '0')}`;
+            }
+            
+            // Remove required from wake-up time when manual inputs are used
+            wakeUpTimeInput.removeAttribute('required');
+        }
+ 
+    }
+    
+    wakeUpTimeInput.addEventListener('change', function() {
+        if (this.value) {
+            // Calculate difference between wake-up time and 9:30 AM
+            const [wakeHours, wakeMinutes] = this.value.split(':').map(Number);
+            const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
+            const targetTimeMinutes = 9 * 60 + 30; // 9:30 AM in minutes
+            
+            let diffMinutes = targetTimeMinutes - wakeTimeMinutes;
+            
+            // Allow negative values for late wake-ups (after 9:30 AM)
+            // diffMinutes will be negative if wake-up is after 9:30 AM
+            
+            // Convert to hours and minutes (handle negative values properly)
+            let hours, minutes;
+            if (diffMinutes >= 0) {
+                hours = Math.floor(diffMinutes / 60);
+                minutes = diffMinutes % 60;
+            } else {
+                // For negative values, we need to handle the math differently
+                hours = Math.ceil(diffMinutes / 60);
+                minutes = diffMinutes % 60;
+            }
+            
+            // Update the manual input fields
+            hoursInput.value = hours;
+            minutesInput.value = minutes;
+        }
+    });
+    
+    // Update wake-up time when manual inputs change
+    hoursInput.addEventListener('input', function() {
+        updateWakeUpTime();
+    });
+    
+    minutesInput.addEventListener('input', function() {
+        updateWakeUpTime();
+    });
+    
     // Initialize chart
     initializeChart();
     
@@ -96,7 +169,24 @@ document.getElementById('tradingForm').addEventListener('submit', async function
     
     // Get form values
     const rating = parseFloat(document.getElementById('rating').value);
-    const hoursAwake = parseFloat(document.getElementById('hoursAwake').value);
+    const wakeUpTime = document.getElementById('wakeUpTime').value;
+    let hoursAwake;
+    
+    // Check if wake-up time is provided
+    if (wakeUpTime) {
+        // Calculate from wake-up time
+        const [wakeHours, wakeMinutes] = wakeUpTime.split(':').map(Number);
+        const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
+        const targetTimeMinutes = 9 * 60 + 30; // 9:30 AM
+        const diffMinutes = targetTimeMinutes - wakeTimeMinutes;
+        hoursAwake = diffMinutes / 60;
+    } else {
+        // Use manual hours/minutes
+        const hours = parseInt(document.getElementById('hoursAwake').value) || 0;
+        const minutes = parseInt(document.getElementById('minutesAwake').value) || 0;
+        hoursAwake = hours + (minutes / 60);
+    }
+    
     const date = document.getElementById('date').value;
     const notes = document.getElementById('notes').value;
     
@@ -106,8 +196,13 @@ document.getElementById('tradingForm').addEventListener('submit', async function
         return;
     }
     
-    if (hoursAwake < 0 || hoursAwake > 24) {
-        alert('Hours awake must be between 0 and 24');
+    if (hoursAwake < -24) {
+        alert('Time awake cannot be less than -24 hours');
+        return;
+    }
+    
+    if (hoursAwake > 24) {
+        alert('Time awake cannot exceed 24 hours');
         return;
     }
     
@@ -119,6 +214,8 @@ document.getElementById('tradingForm').addEventListener('submit', async function
         notes: notes || null,
         timestamp: new Date().toISOString()
     };
+
+    console.log(supabaseEntry);
     
     // Save to Supabase
     if (supabaseClient) {
@@ -148,6 +245,12 @@ document.getElementById('tradingForm').addEventListener('submit', async function
             this.reset();
             // Set date back to today
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            // Clear all time inputs
+            document.getElementById('hoursAwake').value = '';
+            document.getElementById('minutesAwake').value = '';
+            document.getElementById('wakeUpTime').value = '';
+            // Wake-up time is required by default
+            document.getElementById('wakeUpTime').setAttribute('required', '');
             
             // Show success message
             showNotification('Entry added successfully!', 'success');
@@ -172,6 +275,10 @@ document.getElementById('tradingForm').addEventListener('submit', async function
         updateChart();
         this.reset();
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('hoursAwake').value = '';
+        document.getElementById('minutesAwake').value = '';
+        document.getElementById('wakeUpTime').value = '';
+        document.getElementById('wakeUpTime').setAttribute('required', '');
         showNotification('Entry saved locally (no database connection)', 'warning');
         rainCatEmoji(rating);
     }
@@ -211,10 +318,28 @@ function initializeChart() {
                     callbacks: {
                         label: function(context) {
                             const dataPoint = tradingData[context.dataIndex];
+                            
+                            // Convert decimal hours back to hours and minutes for display
+                            const totalMinutes = Math.round(dataPoint.hoursAwake * 60);
+                            const isNegative = totalMinutes < 0;
+                            const absTotalMinutes = Math.abs(totalMinutes);
+                            const displayHours = Math.floor(absTotalMinutes / 60);
+                            const displayMinutes = absTotalMinutes % 60;
+                            let timeString;
+                            
+                            if (isNegative) {
+                                timeString = displayMinutes > 0 
+                                    ? `-${displayHours}h ${displayMinutes}m (woke up late!)` 
+                                    : `-${displayHours}h (woke up late!)`;
+                            } else {
+                                timeString = displayMinutes > 0 
+                                    ? `${displayHours}h ${displayMinutes}m` 
+                                    : `${displayHours}h`;
+                            }
 
                             const lines = [
                                 `Rating: ${dataPoint.rating}`,
-                                `Hours Awake: ${dataPoint.hoursAwake}`,
+                                `Time Awake: ${timeString}`,
                                 `Date: ${formatDate(dataPoint.date)}`,
                             ];
                             if (dataPoint.notes) {
@@ -237,17 +362,17 @@ function initializeChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Hours Awake Before 9:30 AM',
+                        text: 'Hours Awake Before 9:30 AM (negative = woke up late)',
                         font: {
                             size: 13,
                             weight: 400
                         },
                         color: '#666'
                     },
-                    min: 0,
+                    min: -1,
                     suggestedMax: 3,
                     ticks: {
-                        stepSize: 0.2,
+                        stepSize: 0.5,
                         color: '#666'
                     },
                     grid: {
