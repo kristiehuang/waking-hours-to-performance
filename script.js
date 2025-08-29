@@ -40,6 +40,7 @@ async function loadDataFromSupabase() {
         tradingData = data.map(entry => ({
             rating: parseFloat(entry.rating),
             hoursAwake: parseFloat(entry.hours_awake),
+            hoursSlept: entry.hours_slept ? parseFloat(entry.hours_slept) : null,
             date: entry.date,
             notes: entry.notes,
             timestamp: entry.timestamp,
@@ -69,79 +70,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const dateInput = document.getElementById('date');
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
-    
-    // Add event listener for wake-up time input
-    const wakeUpTimeInput = document.getElementById('wakeUpTime');
-    const hoursInput = document.getElementById('hoursAwake');
-    const minutesInput = document.getElementById('minutesAwake');
-    
-    // Function to update wake-up time from hours/minutes
-    function updateWakeUpTime() {
-        const hours = parseInt(hoursInput.value) || 0;
-        const minutes = parseInt(minutesInput.value) || 0;
-    
-        if (hoursInput.value === '' && minutesInput.value === '') {
-            // Re-add required to wake-up time when manual inputs are cleared
-            wakeUpTimeInput.setAttribute('required', '');
-        } else {
-            // Calculate wake-up time by subtracting from 9:30 AM
-            const targetMinutes = 9 * 60 + 30; // 9:30 AM in minutes
-            const awakeMinutes = hours * 60 + minutes;
-            const wakeMinutes = targetMinutes - awakeMinutes;
-            
-            if (wakeMinutes < 0) {
-                const wakeHours = Math.ceil(wakeMinutes / 60);
-                const wakeMins = wakeMinutes % 60;
-                wakeUpTimeInput.value = `${String(wakeHours).padStart(2, '0')}:${String(wakeMins).padStart(2, '0')}`;
-            } else {
-                const wakeHours = Math.floor(wakeMinutes / 60);
-                const wakeMins = wakeMinutes % 60;
-                wakeUpTimeInput.value = `${String(wakeHours).padStart(2, '0')}:${String(wakeMins).padStart(2, '0')}`;
-            }
-            
-            // Remove required from wake-up time when manual inputs are used
-            wakeUpTimeInput.removeAttribute('required');
-        }
- 
-    }
-    
-    wakeUpTimeInput.addEventListener('change', function() {
-        if (this.value) {
-            // Calculate difference between wake-up time and 9:30 AM
-            const [wakeHours, wakeMinutes] = this.value.split(':').map(Number);
-            const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
-            const targetTimeMinutes = 9 * 60 + 30; // 9:30 AM in minutes
-            
-            let diffMinutes = targetTimeMinutes - wakeTimeMinutes;
-            
-            // Allow negative values for late wake-ups (after 9:30 AM)
-            // diffMinutes will be negative if wake-up is after 9:30 AM
-            
-            // Convert to hours and minutes (handle negative values properly)
-            let hours, minutes;
-            if (diffMinutes >= 0) {
-                hours = Math.floor(diffMinutes / 60);
-                minutes = diffMinutes % 60;
-            } else {
-                // For negative values, we need to handle the math differently
-                hours = Math.ceil(diffMinutes / 60);
-                minutes = diffMinutes % 60;
-            }
-            
-            // Update the manual input fields
-            hoursInput.value = hours;
-            minutesInput.value = minutes;
-        }
-    });
-    
-    // Update wake-up time when manual inputs change
-    hoursInput.addEventListener('input', function() {
-        updateWakeUpTime();
-    });
-    
-    minutesInput.addEventListener('input', function() {
-        updateWakeUpTime();
-    });
     
     // Initialize chart
     initializeChart();
@@ -179,25 +107,36 @@ document.getElementById('tradingForm').addEventListener('submit', async function
     // Get form values
     const rating = parseFloat(document.getElementById('rating').value);
     const wakeUpTime = document.getElementById('wakeUpTime').value;
-    let hoursAwake;
-    
-    // Check if wake-up time is provided
-    if (wakeUpTime) {
-        // Calculate from wake-up time
-        const [wakeHours, wakeMinutes] = wakeUpTime.split(':').map(Number);
-        const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
-        const targetTimeMinutes = 9 * 60 + 30; // 9:30 AM
-        const diffMinutes = targetTimeMinutes - wakeTimeMinutes;
-        hoursAwake = diffMinutes / 60;
-    } else {
-        // Use manual hours/minutes
-        const hours = parseInt(document.getElementById('hoursAwake').value) || 0;
-        const minutes = parseInt(document.getElementById('minutesAwake').value) || 0;
-        hoursAwake = hours + (minutes / 60);
-    }
-    
+    const bedTime = document.getElementById('bedTime').value;
     const date = document.getElementById('date').value;
     const notes = document.getElementById('notes').value;
+    
+    // Calculate hours awake before 9:30 AM
+    const [wakeHours, wakeMinutes] = wakeUpTime.split(':').map(Number);
+    const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
+    const targetTimeMinutes = 9 * 60 + 30; // 9:30 AM
+    const diffMinutes = targetTimeMinutes - wakeTimeMinutes;
+    const hoursAwake = diffMinutes / 60;
+    
+    // Calculate hours of sleep if bedtime is provided
+    let hoursSlept = null;
+    if (bedTime) {
+        console.log('bedTime', bedTime);
+        const [bedHours, bedMinutes] = bedTime.split(':').map(Number);
+        const bedTimeMinutes = bedHours * 60 + bedMinutes;
+        
+        // Calculate sleep duration
+        // If wake up time is after bedtime (i.e. 9:30am is after 1:00am), it means they slept past minute. Just subtract
+        // If wake up time is before bedtime (i.e. 23:00 is after 9:30am), it means they slept before midnight
+        let sleepMinutes;
+        if (wakeTimeMinutes >= bedTimeMinutes) {
+            sleepMinutes = wakeTimeMinutes - bedTimeMinutes;
+        } else {
+            // Slept before midnight
+            sleepMinutes = (24 * 60 - bedTimeMinutes) + wakeTimeMinutes;
+        }
+        hoursSlept = sleepMinutes / 60;
+    }
     
     // Validate input
     if (rating < 1 || rating > 10) {
@@ -219,6 +158,7 @@ document.getElementById('tradingForm').addEventListener('submit', async function
     const supabaseEntry = {
         rating: rating,
         hours_awake: hoursAwake,
+        hours_slept: hoursSlept,
         date: date,
         notes: notes || null,
         timestamp: new Date().toISOString()
@@ -240,6 +180,7 @@ document.getElementById('tradingForm').addEventListener('submit', async function
             const entry = {
                 rating: rating,
                 hoursAwake: hoursAwake,
+                hoursSlept: hoursSlept,
                 date: date,
                 notes: notes,
                 timestamp: data[0].timestamp,
@@ -254,13 +195,7 @@ document.getElementById('tradingForm').addEventListener('submit', async function
             this.reset();
             // Set date back to today
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
-            // Clear all time inputs
-            document.getElementById('hoursAwake').value = '';
-            document.getElementById('minutesAwake').value = '';
-            document.getElementById('wakeUpTime').value = '';
-            // Wake-up time is required by default
-            document.getElementById('wakeUpTime').setAttribute('required', '');
-            
+
             // Show success message
             showNotification('Entry added successfully!', 'success');
             
@@ -275,6 +210,7 @@ document.getElementById('tradingForm').addEventListener('submit', async function
         const entry = {
             rating: rating,
             hoursAwake: hoursAwake,
+            hoursSlept: hoursSlept,
             date: date,
             notes: notes,
             timestamp: new Date().toISOString()
@@ -284,10 +220,6 @@ document.getElementById('tradingForm').addEventListener('submit', async function
         updateChart();
         this.reset();
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('hoursAwake').value = '';
-        document.getElementById('minutesAwake').value = '';
-        document.getElementById('wakeUpTime').value = '';
-        document.getElementById('wakeUpTime').setAttribute('required', '');
         showNotification('Entry saved locally (no database connection)', 'warning');
         rainCatEmoji(rating);
     }
@@ -387,10 +319,22 @@ function initializeChart() {
                                 return div.innerHTML;
                             };
                             
+                            // Format sleep hours if available
+                            let sleepString = '';
+                            if (dataPoint.hoursSlept !== null && dataPoint.hoursSlept !== undefined) {
+                                const sleepTotalMinutes = Math.round(dataPoint.hoursSlept * 60);
+                                const sleepHours = Math.floor(sleepTotalMinutes / 60);
+                                const sleepMinutes = sleepTotalMinutes % 60;
+                                sleepString = sleepMinutes > 0 
+                                    ? `${sleepHours}h ${sleepMinutes}m` 
+                                    : `${sleepHours}h`;
+                            }
+                            
                             const innerHtml = `
                                 <div style="background: rgba(0, 0, 0, 0.9); color: white; padding: 12px; border-radius: 4px; font-size: 13px; min-width: 200px;">
                                     <div style="margin-bottom: 6px"><strong>Rating:</strong> ${dataPoint.rating}</div>
                                     <div style="margin-bottom: 6px"><strong>Time Awake:</strong> ${timeString}</div>
+                                    ${sleepString ? `<div style="margin-bottom: 6px"><strong>Sleep:</strong> ${sleepString}</div>` : ''}
                                     <div style="margin-bottom: 6px"><strong>Date:</strong> ${dataPoint.date}</div>
                                     ${dataPoint.notes ? `<div style="margin-bottom: 8px"><strong>Notes:</strong> ${escapeHtml(dataPoint.notes)}</div>` : ''}
                                     <button onclick="deleteDataPoint(${dataIndex})" style="
@@ -535,11 +479,12 @@ document.getElementById('exportData').addEventListener('click', function() {
     }
     
     // Convert to CSV
-    const headers = ['Date', 'Rating', 'Hours Awake', 'Notes'];
+    const headers = ['Date', 'Rating', 'Hours Awake', 'Hours Slept', 'Notes'];
     const rows = tradingData.map(entry => [
         entry.date,
         entry.rating,
         entry.hoursAwake,
+        entry.hoursSlept !== null ? entry.hoursSlept : '',
         entry.notes || ''
     ]);
     
