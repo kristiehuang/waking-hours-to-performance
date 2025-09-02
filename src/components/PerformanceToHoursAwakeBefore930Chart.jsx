@@ -21,10 +21,13 @@ ChartJS.register(
   Legend
 );
 
-function PerformanceChart({ data, onDeleteEntry }) {
+function PerformanceToHrsAwakeBefore930Chart({ data, onDeleteEntry }) {
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const chartRef = useRef(null);
+  const tooltipRef = useRef({ data: null, position: { x: 0, y: 0 } });
+  const hideTimeoutRef = useRef(null);
+  const isTooltipHoveredRef = useRef(false);
 
   // Convert data to chart format
   const chartData = {
@@ -61,8 +64,27 @@ function PerformanceChart({ data, onDeleteEntry }) {
           const tooltipModel = context.tooltip;
           
           if (tooltipModel.opacity === 0) {
-            setTooltipData(null);
+            // Clear any existing timeout
+            if (hideTimeoutRef.current) {
+              clearTimeout(hideTimeoutRef.current);
+            }
+            
+            // Set a timeout to hide tooltip (unless hovering over it)
+            hideTimeoutRef.current = setTimeout(() => {
+              if (!isTooltipHoveredRef.current) {
+                if (tooltipRef.current.data !== null) {
+                  tooltipRef.current.data = null;
+                  setTooltipData(null);
+                }
+              }
+            }, 100);
             return;
+          }
+          
+          // Clear hide timeout if showing tooltip
+          if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current);
+            hideTimeoutRef.current = null;
           }
 
           if (tooltipModel.body) {
@@ -70,12 +92,21 @@ function PerformanceChart({ data, onDeleteEntry }) {
             const dataPoint = data[dataIndex];
             
             const position = context.chart.canvas.getBoundingClientRect();
-            setTooltipPosition({
-              x: position.left + window.pageXOffset + tooltipModel.caretX,
-              y: position.top + window.pageYOffset + tooltipModel.caretY
-            });
+            const newX = position.left + tooltipModel.caretX;
+            const newY = position.top + tooltipModel.caretY;
             
-            setTooltipData({ dataPoint, dataIndex });
+            // Only update if position has actually changed
+            if (tooltipRef.current.position.x !== newX || tooltipRef.current.position.y !== newY) {
+              tooltipRef.current.position = { x: newX, y: newY };
+              setTooltipPosition({ x: newX, y: newY });
+            }
+            
+            // Only update tooltip data if it's different
+            if (!tooltipRef.current.data || 
+                tooltipRef.current.data.dataIndex !== dataIndex) {
+              tooltipRef.current.data = { dataPoint, dataIndex };
+              setTooltipData({ dataPoint, dataIndex });
+            }
           }
         }
       }
@@ -129,14 +160,24 @@ function PerformanceChart({ data, onDeleteEntry }) {
   // Click outside to hide tooltip
   useEffect(() => {
     const handleClick = (e) => {
-      if (tooltipData && !e.target.closest('.custom-tooltip') && !e.target.closest('canvas')) {
+      if (tooltipData && !e.target.closest('.custom-tooltip-awake') && !e.target.closest('canvas')) {
         setTooltipData(null);
+        isTooltipHoveredRef.current = false;
       }
     };
 
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, [tooltipData]);
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const formatTimeString = (hoursAwake) => {
     const totalMinutes = Math.round(hoursAwake * 60);
@@ -175,14 +216,31 @@ function PerformanceChart({ data, onDeleteEntry }) {
       
       {tooltipData && (
         <div 
-          className="custom-tooltip"
+          className="custom-tooltip-awake"
+          onMouseEnter={() => {
+            isTooltipHoveredRef.current = true;
+            if (hideTimeoutRef.current) {
+              clearTimeout(hideTimeoutRef.current);
+              hideTimeoutRef.current = null;
+            }
+          }}
+          onMouseLeave={() => {
+            isTooltipHoveredRef.current = false;
+            // Hide tooltip after a small delay when mouse leaves
+            hideTimeoutRef.current = setTimeout(() => {
+              setTooltipData(null);
+              tooltipRef.current.data = null;
+            }, 300);
+          }}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             left: tooltipPosition.x + 'px',
             top: tooltipPosition.y + 'px',
             pointerEvents: 'auto',
             zIndex: 1000,
-            transition: 'opacity 0.2s ease'
+            transition: 'opacity 0.2s ease',
+            transform: 'translate(-50%, -100%)',
+            marginTop: '-10px'
           }}
         >
           <div style={{
@@ -240,6 +298,6 @@ function PerformanceChart({ data, onDeleteEntry }) {
   );
 }
 
-export default PerformanceChart;
+export default PerformanceToHrsAwakeBefore930Chart;
 
 

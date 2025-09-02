@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import TradingForm from './components/TradingForm';
-import PerformanceChart from './components/PerformanceChart';
+import PerformanceToHrsAwakeBefore930Chart from './components/PerformanceToHoursAwakeBefore930Chart';
 import DataActions from './components/DataActions';
 import NotificationProvider from './components/NotificationProvider';
 import CatRain from './components/CatRain';
 import { supabaseClient, TRADING_TABLE } from './utils/supabase-config';
 import { useNotification } from './hooks/useNotification';
+import PerformanceToHrsSleptChart from './components/PerformanceToHoursSleptChart';
 
 function AppContent() {
   const [tradingData, setTradingData] = useState([]);
@@ -266,24 +267,30 @@ function AppContent() {
             onExport={handleExportData}
             onClear={handleClearData}
           />
-        </div>
-        
-        <div className="chart-section">
-          <h2>in a chart</h2>
-          <PerformanceChart 
-            data={tradingData}
-            onDeleteEntry={handleDeleteEntry}
-          />
-          <p className="chart-info">hover over data points to see details</p>
           <div 
             id="connectionStatus" 
             style={{ 
               fontSize: '0.9em', 
+              marginTop: '1rem',
               color: isConnected ? '#4ade80' : '#f87171' 
             }}
           >
             {isConnected ? '🟢 connected' : '🔴 ' + (connectionMessage || 'Not connected to database (using local storage)')}
           </div>
+        </div>
+        
+        <div className="chart-section">
+          <h2>in two charts:</h2>
+          <p className="chart-info">performance x hours awake before 9:30 AM</p>
+          <PerformanceToHrsAwakeBefore930Chart 
+            data={tradingData}
+            onDeleteEntry={handleDeleteEntry}
+          />
+          <p className="chart-info">performance x hours slept</p>
+          <PerformanceToHrsSleptChart 
+            data={tradingData}
+            onDeleteEntry={handleDeleteEntry}
+          />
         </div>
       </div>
       
