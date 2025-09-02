@@ -4,92 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading Day Performance Tracker</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>trading day performance tracker ❤️</h1>
-        
-        <div class="content-wrapper">
-            <div class="form-section">
-                <h2>how was your day?</h2>
-                <form id="tradingForm">
-                    <div class="form-group">
-                        <label for="rating">trading day rating (1-10):</label>
-                        <input 
-                            type="number" 
-                            id="rating" 
-                            name="rating" 
-                            min="1" 
-                            max="10" 
-                            step="0.1" 
-                            required
-                            placeholder="e.g., 7.5"
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="wakeUpTime">wake-up time:</label>
-                        <input 
-                            type="time" 
-                            id="wakeUpTime" 
-                            name="wakeUpTime"
-                            required
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="bedTime">bedtime (optional):</label>
-                        <input 
-                            type="time" 
-                            id="bedTime" 
-                            name="bedTime"
-                        >
-                        <span style="font-size: 0.85em; margin-left: 10px; color: #666;">previous night</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="date">date:</label>
-                        <input 
-                            type="date" 
-                            id="date" 
-                            name="date" 
-                            required
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="notes">notes:</label>
-                        <textarea 
-                            id="notes" 
-                            name="notes" 
-                            rows="3"
-                            placeholder="notes n comments"
-                        ></textarea>
-                    </div>
-                    
-                    <button type="submit">add entry</button>
-                </form>
-                
-                <div class="data-actions">
-                    <button id="exportData" class="secondary-btn">export to csv</button>
-                    <button id="clearData" class="danger-btn">clear all data >:(</button>
-                </div>
-            </div>
-            
-            <div class="chart-section">
-                <h2>in a chart</h2>
-                <div class="chart-container">
-                    <canvas id="performanceChart"></canvas>
-                </div>
-                <p class="chart-info">hover over data points to see details</p>
-                <div id="connectionStatus" style="font-size: 0.9em; color: #666;"></div>
-            </div>
-        </div>
-    </div>
-    
-    <script type="module" src="script.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

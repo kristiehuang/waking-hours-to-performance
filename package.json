@@ -1,7 +1,7 @@
 {
   "name": "trading-day-to-waking-hours",
   "version": "1.0.0",
-  "description": "A simple web app to track the correlation between wake-up time and trading day performance. Built with vanilla JavaScript and Chart.js, hosted on GitHub Pages.",
+  "description": "A simple web app to track the correlation between wake-up time and trading day performance. Built with React and Chart.js, hosted on GitHub Pages.",
   "main": "script.js",
   "scripts": {
     "dev": "vite",
@@ -19,7 +19,15 @@
     "url": "https://github.com/kristiehuang/waking-hours-to-performance/issues"
   },
   "homepage": "https://github.com/kristiehuang/waking-hours-to-performance#readme",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@supabase/supabase-js": "^2.39.2",
+    "chart.js": "^4.4.1",
+    "react-chartjs-2": "^5.2.0"
+  },
   "devDependencies": {
-    "vite": "^7.1.3"
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.11"
   }
 }
